@@ -1,0 +1,633 @@
+import turtle as trtl
+import random as rand
+import time as tm
+
+#var
+combat_active = 0
+
+player_health = 30 #should be applied even outside of fights
+
+enemy1_health = 0
+enemy2_health = 0
+enemy3_health = 0
+enemy4_health = 0
+enemy5_health = 0
+
+enem1_ded = 0
+enem2_ded = 0
+enem3_ded = 0
+enem4_ded = 0
+enem5_ded = 0
+
+    #Health values from 1 round before#
+enemy1_health_og = 0 
+enemy2_health_og = 0
+enemy3_health_og = 0
+enemy4_health_og = 0
+enemy5_health_og = 0
+
+Wins = 0
+GAMEOVER = 0
+
+enemies_eliminated = 0
+
+#list
+enemy_healths = [enemy1_health, enemy2_health, enemy3_health, enemy4_health, enemy5_health]
+enemy_og_healths = [enemy1_health_og, enemy2_health_og, enemy3_health_og, enemy4_health_og, enemy5_health_og]
+enemy_types = ["monk","brawler","guarder","boxer",] #must be lowercase/exact as other instances they appear in, currently exposed to enemy types
+starter_moves = ["jab","front kick","pit blow",]
+all_moves = ["axe kick","head butt",]
+player_moves = []#moves the player starts with and can get later
+enemy_slots = [] #Very important, used for special cases, must be a global variable for multiple functions, is to be appended as an enemy type is selected to simulate a 1-5 slot being taken up with the exact text 'enemy1' 'enemy2' etc. for use inside player attack function, consists of STRINGS
+
+##random comments
+battle_comments_plyr = ["You are ready to roll","You see the enemy faulter","You see the enemy got tired","You get angry","You should probably attack now"]
+battle_comments_ene = ["The enemy attacks","The enemy sees you got tired","The enemy gets riled up","The enemy is ready"]
+enemies_dead_comments = ["The enemy has had enough","The enemy is no longer feeling it or anything else really","The opposition goes down","The other side lies still"]
+player_dead_comments = ["You screwed something up","You are in a lot of pain apparently","You seemingly can no longer go on"]
+win_comments = ["You battered the enemy senseless","You moderately won","ENEMIES SLAIN","You seem to have won","Vict- victory?.. Yeah, Victory"]
+lose_comments = ["Game Over... over... over...","wow... You Lost","Dot? DOT? DOOOOOOOOOOOOOOOOOOOOOOOOOOOT!!!!!!","YOU DIED","DEATH \n 死"]
+
+#####TURTLES#####
+
+#Display Turtles
+PlayerIcon = trtl.Turtle(shape="circle")
+EnemyIcon1 = trtl.Turtle()
+EnemyIcon2 = trtl.Turtle()
+EnemyIcon3 = trtl.Turtle()
+EnemyIcon4 = trtl.Turtle()
+EnemyIcon5 = trtl.Turtle()
+EnemyIcon1.hideturtle()
+EnemyIcon2.hideturtle()
+EnemyIcon3.hideturtle()
+EnemyIcon4.hideturtle()
+EnemyIcon5.hideturtle()
+EnemyIcons = [EnemyIcon1,EnemyIcon2,EnemyIcon3,EnemyIcon4,EnemyIcon5]
+
+#Windows
+trtl.screensize(50,80)
+
+###[DEF] COMMON FUNCTIONS
+def battle_displays():#orientaion/showing
+  #player
+  PlayerIcon.color("red")
+  PlayerIcon.penup()
+  PlayerIcon.goto(0,-10)
+  #enemies
+  displacement = -100
+  icon_index = 0 #throwaway index value for here
+  for icon in present_enemies:
+    curr_icon = EnemyIcons[icon_index]
+    curr_icon.penup()
+    curr_icon.showturtle()
+    curr_icon.right(90)
+    curr_icon.speed(0)
+    curr_icon.goto(displacement, 90)
+    displacement += 50
+    icon_index += 1
+
+def combat_encounter():
+  print("A Battle Begins.")
+  tm.sleep(1)
+
+  #tool variables
+  global combat_active
+  global player_dead
+  global enemies_dead
+  global amount_of_en #global for use in round_end function
+  global present_enemies
+  global enemies_eliminated
+
+  combat_active = 1
+  player_dead = 0 #player dead boolean
+  enemies_dead = 0 #all enemies dead boolean
+  enemies_eliminated = 0 #resets the record of defeated enemies
+  
+  ####enemy selection###
+  #tools
+  present_enemies = [] #used inside encounters for what enemies are currently there, can have repeats
+  if Wins < 3:
+    amount_of_en = rand.randint(1,2)
+  elif Wins < 5:
+    amount_of_en = rand.randint(2,3)
+  else:
+    amount_of_en = rand.randint(4,5)
+  global enemy_slots
+  
+  for i in range (amount_of_en): #uses amount of enemies as int
+    enemy = str(rand.choice(enemy_types))#chooses type at random
+    present_enemies.append(enemy)#appends type to list of present enemies
+    enemy_slots.append("enemy" + str(i + 1))
+
+  battle_displays() #shows turtle icons
+  health_innitializers(amount_of_en)
+  print("\n ")
+  for ene in present_enemies: #list does not use 'range'
+    print("A " + ene + " appeared!")
+
+  ###########Actual Fighting############
+  ###########Actual Fighting############
+  while enemies_dead != 1 and player_dead != 1:
+    #player turn
+    player_attack(rand.randint(0,1)) #[Random Crits]
+    tm.sleep(1)
+    damage_dealer(0,dmg, target) #first 0 cause enemies don't attack
+    round_end()
+    tm.sleep(1)
+    if enemies_dead != 1: #failsafe
+      enemy_attack()
+      tm.sleep(2)
+      damage_dealer(dmg,0,0)
+      tm.sleep(1)
+      round_end()
+      tm.sleep(1)
+  ###########Actual Fighting############
+  ###########Actual Fighting############
+  fight_over()
+
+def health_innitializers(amount_of_en):
+  global player_health
+  
+  global enemy1_health
+  global enemy2_health
+  global enemy3_health
+  global enemy4_health
+  global enemy5_health
+
+  global enemy1_health_og
+  global enemy2_health_og
+  global enemy3_health_og
+  global enemy4_health_og
+  global enemy5_health_og
+  
+  enemy1_health = 1 #enemies who do not exist get a 1
+  enemy2_health = 1 #makes no difference in outcome
+  enemy3_health = 1 #situtation due to defeated being 
+  enemy4_health = 1 #counted as a numeric value
+  enemy5_health = 1 
+  
+  if amount_of_en > 0:
+    enemy1_health = 10
+    enemy1_health_og = 10
+  if amount_of_en > 1:
+    enemy2_health = 10
+    enemy2_health_og = 10
+  if amount_of_en > 2:
+    enemy3_health = 10
+    enemy3_health_og = 10
+  if amount_of_en > 3:
+    enemy4_health = 10
+    enemy4_health_og = 10
+  if amount_of_en > 4:
+    enemy5_health = 10
+    enemy5_health_og = 10
+
+def icon_bump_write(icon,health):#health param is the chosen specific health to write from "battle updates" icon param is the chosen specfic icon to write it's health, icon_jump is to be called inside of battle_updates.
+  icon.left(90)
+  icon.forward(10)
+  icon.clear()
+  icon.write(str(health),align="center",font=("Courier",12))
+  icon.backward(10)
+  icon.right(90)
+
+def battle_updates(player, enemy1=0,enemy2=0,enemy3=0,enemy4=0,enemy5=0): #Displays health on turtle screen etc. To be called inside of damage dealer, parameters are health values
+  global EnemyIcons
+  global PlayerIcon
+  global enemy_og_healths
+  
+  enemy_icon_health_updates = [enemy1,enemy2,enemy3,enemy4,enemy5] #should be local, holds parameters of current health values
+  
+  if player > 0:
+    icon_bump_write(PlayerIcon,player)
+  icon_index = 0 #should init 0 outside loop
+  for health in enemy_icon_health_updates:
+    if health > 1: #makes sure enemy exists
+      if health > enemy_og_healths[icon_index]: #makes sure enemy took damage
+        curr_icon = EnemyIcons[icon_index]
+        icon_bump_write(curr_icon,health)
+    else:
+      pass
+
+    icon_index += 1 #should add whether or not curr icon is changing health
+    
+  
+
+def player_attack(has_special): #has_special 1=double dmg 2=quad dmg
+  global dmg #global just to be used as function arguments.
+  global target
+  dmg = 0
+  target = ""
+  
+  ###target choice###
+  print(rand.choice(battle_comments_plyr))
+  print("Your Turn")
+  print("Choose a target: ")
+  print("\n ")
+  
+  target = input("Choose A Target- Type 'enemy1' 'enemy2' etc.: ") #'target' is typed string from user. Can have different letter cases but gets changed after and during for simplicity
+  for enemy in enemy_slots:
+    if target.lower() == enemy:
+      break
+  else:
+    target_found = 0
+    while target_found != 1: #should be infinite
+      target = input("Target not found, choose another: ")
+      for enemy in enemy_slots:
+        if target.lower() == enemy:
+          target_found = 1
+        
+  target = target.lower() #finally just make it lowercase for simplicity, hinges on string being in "enemy_slots"
+  #target is finally set--- target is global so this ends here
+  player_move_choice(target)
+  
+  if has_special == 1:
+    dmg = dmg*2
+    print("Double Damage")
+  if has_special == 2:
+    dmg = dmg*4
+    print("QUAD DAMAGE")
+  print("\n ")
+    
+  tm.sleep(1)
+  #dmg is finally set---
+  
+def player_move_choice(target): # to be used within player attack
+  global can_attack
+  global dmg
+  dmg = 0
+  can_attack = 1
+  ###move choice### TURN INTO FUNCTION
+  print("\n ")
+  print("You know how to " )
+  print(player_moves[:-1]) #prints beginning to before last for flexibility
+  print("and")
+  print(player_moves[-1:]) #prints last move
+  print("\n ")
+
+  print("To attack, type 'jab','front kick', etc. with spaces.")
+  print("For move info, type 'info', space, [move name] \n")
+  
+  while can_attack == 1:
+    attack_choice = input("What will you do?: ")
+    
+    if attack_choice.lower() == "jab":
+      jab(target)
+    elif attack_choice.lower() == "info jab":
+      print("\n A standard jab. Does 2 dmg. Has chance to allow another attack.")
+      
+    if attack_choice.lower() == "front kick":
+      front_kick(target)
+    elif attack_choice.lower() == "info front kick":
+      print("\n A front jutting kick to the abdomin. Does 4 damage.")
+
+    if attack_choice.lower() == "axe kick":
+      axe_kick(target)
+    elif attack_choice.lower() == "info axe kick":
+      print("A powerful downward kick executed after raising the leg parrallel to torso. Does 8 dmg. Has 50% chance of missing.")
+
+    if attack_choice.lower() == "pit blow":
+      pit_blow(target)
+    elif attack_choice.lower() == "info pit blow":
+      print("A deft pit blow, aimed at the enemy's stomach. Does 3 dmg. If accumulated dmg in this turn is no more than 4, dmg is doubled before this lands (aka: not including this hit).")
+    if attack_choice.lower() == "head butt":
+      head_butt(target)
+    elif attack_choice.lower() == "info head butt":
+      print("A head butt that encorporates grabbing the enemy. Does 6 dmg. Has a 50% chance of dealing damage to yourself instead. Will always stun.")
+
+
+    
+    else:
+      pass
+
+###################MOVES#####################
+def enemy_attack(): #dont give parameter, this is the process entirely: chooses things internally
+  global dmg #uses global dmg variable in both attack func
+  global present_enemies #list of types
+  global enemy_slots #list of enemies
+  global amount_of_en #integer variable
+  
+  #Enemy is chosen to act
+  ''' OLD METHOD
+  active_enemy_index = rand.randint(0,amount_of_en-1)
+  active_enemy = enemy_slots[active_enemy_index]
+  '''
+  if enemy_slots != []: #if there are enemies
+    active_enemy = rand.choice(enemy_slots) #must choose directly from list as it may loose enemies, ACTIVE_ENEMY is a local temp var
+    print(active_enemy+" attacks")
+    tm.sleep(1)
+    
+    dmg = rand.randint(1,8)
+    print(rand.choice(battle_comments_ene))
+  
+
+
+def damage_dealer(enem_dmg,plyr_dmg,targ): #responsible for adding and subtracting health based on what damage(arguments) it is fed.
+  global dmg
+  global player_dead
+  global enemies_dead #vars needed for ending the encounter
+  #healths should be relative to this function
+  global player_health
+  global enemy1_health
+  global enemy2_health
+  global enemy3_health
+  global enemy4_health
+  global enemy5_health
+  
+  if plyr_dmg > 0:
+    if targ == "enemy1":
+      enemy1_health = enemy1_health - plyr_dmg
+      print("Enemy 1 takes " + str(plyr_dmg) + " damage")
+    if targ == "enemy2":
+      enemy2_health = enemy2_health - plyr_dmg
+      print("Enemy 2 takes " + str(plyr_dmg) + " damage")
+    if targ == "enemy3":
+      enemy3_health = enemy3_health - plyr_dmg
+      print("Enemy 3 takes " + str(plyr_dmg) + " damage")
+    if targ == "enemy4":
+      enemy4_health = enemy4_health - plyr_dmg
+      print("Enemy 4 takes " + str(plyr_dmg) + " damage")
+    if targ == "enemy5":
+      enemy5_health = enemy5_health - plyr_dmg
+      print("Enemy 5 takes " + str(plyr_dmg) + " damage")
+    
+  elif enem_dmg > 0:
+    player_health = player_health - enem_dmg
+    print("You took " + str(enem_dmg) + " damage")
+    print("\n")
+  battle_updates (player_health,enemy1_health,enemy2_health,enemy3_health,enemy4_health,enemy5_health)
+  dmg = 0 #failsafe?
+
+def round_end(): #handles defeat/win checks and updates displays
+  global player_health
+  global enemy1_health
+  global enemy2_health
+  global enemy3_health
+  global enemy4_health
+  global enemy5_health
+  global amount_of_en
+  global enemies_dead #global actor state boolean
+  global player_dead #global actor state boolean
+  global enem1_ded
+  global enem2_ded
+  global enem3_ded
+  global enem4_ded
+  global enem5_ded
+  global enemies_eliminated
+  
+  if enemy1_health < 0 or enemy1_health == 0: ##Enemy 1
+    if enem1_ded == 0:#anti repeat
+      enem1_ded = 1
+      EnemyIcon1.clear()
+      EnemyIcon1.hideturtle()
+      for slot in enemy_slots: #makes sure exists
+        if slot == "enemy1":
+          print("The first enemy goes down.")
+          enemies_eliminated += 1
+          enemy_slots.remove("enemy1")
+  if enemy2_health < 0 or enemy2_health == 0:##Enemy 2
+    if enem2_ded == 0:
+      enem2_ded = 1
+      EnemyIcon2.clear()
+      EnemyIcon2.hideturtle()
+      for slot in enemy_slots: #makes sure exists
+        if slot == "enemy2":
+          print("The second enemy goes down.")
+          enemies_eliminated += 1
+          enemy_slots.remove("enemy2")
+  if enemy3_health < 0 or enemy3_health == 0: ##Enemy 3
+    if enem3_ded == 0:
+      enem3_ded = 1
+      EnemyIcon3.clear()
+      EnemyIcon3.hideturtle()
+      for slot in enemy_slots: #makes sure exists
+        if slot == "enemy3":
+          print("The third enemy goes down.")
+          enemies_eliminated += 1
+          enemy_slots.remove("enemy3")
+  if enemy4_health < 0 or enemy4_health == 0:##Enemy 4
+    if enem4_ded == 0:
+      enem4_ded = 1
+      EnemyIcon4.clear()
+      EnemyIcon4.hideturtle()
+      for slot in enemy_slots: #makes sure exists
+        if slot == "enemy4":
+          print("The forth enemy goes down.")
+          enemies_eliminated += 1
+          enemy_slots.remove("enemy4")
+  if enemy5_health < 0 or enemy5_health == 0:##Enemy 5
+    if enem5_ded == 0:
+      enem5_ded = 1
+      EnemyIcon5.clear()
+      EnemyIcon5.hideturtle()
+      for slot in enemy_slots: #makes sure exists
+        if slot == "enemy5":
+          print("The fifth enemy goes down.")
+          enemies_eliminated += 1
+          enemy_slots.remove("enemy5")
+  #print("[debug] enemies_eliminated "+str(enemies_eliminated))
+  
+  if amount_of_en == enemies_eliminated:
+    print(rand.choice(enemies_dead_comments))
+    enemies_dead = 1
+    #print("[debug] enemies dead set")
+    
+  if player_health <= 0:
+    print(rand.choice(player_dead_comments))
+    player_dead = 1
+
+def fight_over():
+  global GAMEOVER
+  global player_health
+  global PlayerIcon
+  
+  level_up_moves = []
+  
+  icon_reset()
+  
+  if player_dead == 1:
+    print(rand.choice(lose_comments))
+    tm.sleep(1)
+    GAMEOVER = 1
+    pass
+    
+  if enemies_dead == 1:
+    print(rand.choice(win_comments))
+    tm.sleep(1)
+    print("You Have Been Awarded a New Boon")
+    print("Regain Vitality or Relinquish it For a Move.")
+    choice = input("Type 'health' or 'boon' to choose: ")
+    if choice.lower() == "health":
+      player_health += 30
+    else:
+      print("You may learn: ")
+      for i in range (3):
+        selected_move = rand.choice(all_moves)
+        level_up_moves.append(selected_move)
+        all_moves.remove(selected_move)
+      print(level_up_moves)
+        
+      move_1 = input("Which will you choose?: ")
+      correct_choice = 0 #check for if input exists
+      for move in level_up_moves:
+        if move_1.lower() == move: #makes sure input exists
+          player_moves.append(move_1)
+          level_up_moves.remove(move_1)
+          print("You've chosen:")
+          print(move_1)
+          correct_choice = 1
+      if correct_choice == 1:
+        pass
+      else:
+        while correct_choice == 0:
+          move_1 = input("Move Not Found. Choose Another: ")
+          for move in level_up_moves:
+            if move_1.lower() == move:
+              player_moves.append(move_1)
+              level_up_moves.remove(move_1)
+              correct_choice = 1
+    for move in level_up_moves:
+      all_moves.append(move) #put them back
+      
+def icon_reset():
+  global EnemyIcons
+  for icon in EnemyIcons:
+    icon.goto(0,0)
+    icon.left(90)
+    icon.reset
+
+def start_up():
+  global starter_moves
+  
+  print("Get Ready, Solem One")
+  print("\n")
+  print("Here are your boons:")
+
+  print(starter_moves)
+  move_1 = input("Choose Starting Move 1 (type exactly, eg: 'front kick'): ")
+  correct_choice = 0 #check for if input exists
+  for move in starter_moves:
+    if move_1.lower() == move: #makes sure input exists
+      player_moves.append(move_1)
+      starter_moves.remove(move_1)
+      print("You've chosen:")
+      print(player_moves)
+      correct_choice = 1
+  if correct_choice == 1:
+    pass
+  else:
+    while correct_choice == 0:
+      move_1 = input("Move Not Found. Choose Another: ")
+      for move in starter_moves:
+        if move_1.lower() == move:
+          player_moves.append(move_1)
+          starter_moves.remove(move_1)
+          correct_choice = 1
+
+  print("Remaining Boons:")
+  print(starter_moves)
+  move_2 = input("Choose Starting Move 2 (type exactly, eg: 'front kick'): ")
+  correct_choice = 0 #check for if input exists
+  for move in starter_moves:
+    if move_2.lower() == move: #makes sure input exists
+      player_moves.append(move_2)
+      starter_moves.remove(move_2)
+      print("You've chosen:")
+      print(player_moves)
+      correct_choice = 1
+  if correct_choice == 1:
+    pass
+  else:
+    while correct_choice == 0:
+      move_2 = input("Move Not Found. Choose Another: ")
+      for move in starter_moves:
+        if move_2.lower() == move:
+          player_moves.append(move_2)
+          starter_moves.remove(move_2)
+          correct_choice = 1
+  for move in starter_moves:
+    all_moves.append(move) #ones that are left
+
+
+def jab(target):
+  global can_attack
+  global dmg
+  dmg +=2
+  print("You jab " + target)
+  follow_up = rand.randint(1,3)
+  tm.sleep(1)
+  if follow_up == 3:
+    print("Enemy Stunned")
+    tm.sleep(1)
+    print("You Attack Again!")
+    tm.sleep(1)
+    pass
+  else:
+    can_attack = 0
+
+def front_kick(target):
+  global can_attack
+  global dmg
+  dmg +=4
+  can_attack = 0
+  print("You front kick " + target)
+
+def axe_kick(target):
+  global can_attack
+  global dmg
+  hit_outcome = rand.randint(1,2)
+  if hit_outcome == 1:
+    dmg += 0
+    print("You Missed")
+    tm.sleep(1)
+  else:
+    dmg+= 8
+    print("Your heel comes down upon " + target)
+  can_attack = 0
+
+def pit_blow(target):
+  global can_attack
+  global dmg
+  print("You pit blow "+ target)
+  if dmg < 5 and dmg > 0:
+    print("The Blow Caught the Enemy Off Guard!")
+    dmg = dmg * 2
+  dmg += 3
+  can_attack = 0
+
+def head_butt(target):
+  global player_health
+  global dmg
+  global PlayerIcon
+  hit_chance = rand.randint(1,2)
+  if hit_chance == 1:
+    player_health -= 6 #make damage dealer revamp
+    print("You jam your head wrong")
+    print("You took 6 dmg")
+    icon_bump_write(PlayerIcon,player_health)
+  else:
+    print("You head butt " + target)
+    dmg += 6
+  print("Enemy Stunned!")
+  print("You attack again")
+  tm.sleep(1)
+    
+#################MOVES###################
+      
+############### PROGRAM INIT #################
+############### PROGRAM INIT #################
+############### PROGRAM INIT #################
+############### PROGRAM INIT #################
+############### PROGRAM INIT #################
+
+start_up_input = input("Press Any Key to Start: ")
+start_up()
+print("\n Prepare Yourself \n")
+tm.sleep(2)
+while GAMEOVER == 0:
+  combat_encounter()
+
+tm.sleep(2)
+#Game Over Sequence
+print("You Have Relinquished Your Soul.")
+print("\n You Have Returned [" + str(Wins) + "] Drifting Parties to the Medium \n")
+print("Return Once More, Solem One")
